@@ -25,11 +25,11 @@ To design and implement an event-driven pipeline where:
 Data Request -> SQS Queue -> Lambda Trigger -> Glue Job -> Processed Data in S3
 
 ## Project Structure
-aws-event-driven-pipeline/
 
-|-- README.md
-|-- architecture-diagram.png
-'-- documentation/
-    |-- architecture.md
-    |-- setup_steps.md
-    '-- testing.md 
+aws-event-driven-pipeline/
+├── README.md
+├── architecture-diagram.png
+└── documentation/
+    ├── architecture.md
+    ├── setup_steps.md
+    └── testing.md
