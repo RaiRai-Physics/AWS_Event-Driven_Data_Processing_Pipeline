@@ -1,0 +1,45 @@
+import sys
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+
+args = getResolvedOptions(
+    sys.argv,
+    ['JOB_NAME', 'bucket_name', 'file_name', 'source_path', 'destination_path']
+)
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+bucket_name = args['bucket_name']
+file_name = args['file_name']
+source_path = args['source_path']
+destination_path = args['destination_path']
+
+input_path = f"s3://{bucket_name}/{source_path}{file_name}"
+output_path = f"s3://{bucket_name}/{destination_path}"
+
+# Read CSV from S3
+df = spark.read.option("header", "true").option("inferSchema", "true").csv(input_path)
+
+# Transformations
+from pyspark.sql.functions import col, to_date, year, month
+
+df_transformed = (
+    df.withColumn("order_date", to_date(col("order_date"), "M/dd/yyyy"))
+      .withColumn("total_amount", col("quantity") * col("price"))
+      .withColumn("order_year", year(col("order_date")))
+      .withColumn("order_month", month(col("order_date")))
+)
+
+# Optional filter to keep completed orders only
+df_transformed = df_transformed.filter(col("status") == "Completed")
+
+# Write processed data as Parquet
+df_transformed.write.mode("overwrite").parquet(output_path)
+
+job.commit()
