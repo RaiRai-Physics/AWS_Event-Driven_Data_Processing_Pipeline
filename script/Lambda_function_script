@@ -1,0 +1,39 @@
+import json
+import os
+import boto3
+
+glue = boto3.client("glue")
+
+GLUE_JOB_NAME = os.environ["GLUE_JOB_NAME"]
+BUCKET_NAME = os.environ["BUCKET_NAME"]
+
+def lambda_handler(event, context):
+    batch_item_failures = []
+
+    for record in event.get("Records", []):
+        message_id = record["messageId"]
+
+        try:
+            body = json.loads(record["body"])
+
+            file_name = body["file_name"]
+            source_path = body["source_path"]
+            destination_path = body["destination_path"]
+
+            response = glue.start_job_run(
+                JobName=GLUE_JOB_NAME,
+                Arguments={
+                    "--bucket_name": BUCKET_NAME,
+                    "--file_name": file_name,
+                    "--source_path": source_path,
+                    "--destination_path": destination_path
+                }
+            )
+
+            print(f"Started Glue job: {response['JobRunId']} for file {file_name}")
+
+        except Exception as e:
+            print(f"Failed processing message {message_id}: {str(e)}")
+            batch_item_failures.append({"itemIdentifier": message_id})
+
+    return {"batchItemFailures": batch_item_failures}
